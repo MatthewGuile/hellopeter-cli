@@ -2,6 +2,16 @@
 
 A command-line tool for extracting reviews and statistics from the HelloPeter platform.
 
+## IMPORTANT: Terms of Service and Responsible Use
+
+**Disclaimer:** This tool interacts with the HelloPeter website API. Users are solely responsible for ensuring their use of this tool complies with the current HelloPeter Terms of Service (ToS) and any applicable laws or regulations regarding data scraping and API usage.
+
+*   **Review the ToS:** Before using this tool, please review HelloPeter's official Terms of Service.
+*   **Use Responsibly:** Avoid making excessive requests in a short period. The default rate limiting settings (delay between requests, retries) are designed to be respectful, but aggressive usage could negatively impact HelloPeter's services and may violate their ToS.
+*   **No Guarantees:** APIs can change without notice. This tool may stop working if HelloPeter modifies its API structure or access policies.
+
+The developers of this tool assume no liability for misuse or for any consequences arising from the user's failure to comply with HelloPeter's Terms of Service.
+
 ## Overview
 
 This tool allows you to:
@@ -45,7 +55,6 @@ The tool requires the following Python packages:
 - pandas: For data manipulation and CSV export
 - tqdm: For progress bars
 - backoff: For exponential backoff on API requests
-- python-dotenv: Included for potential future use with environment variables
 
 These dependencies are listed in the `requirements.txt` file and will be automatically installed when you install the package.
 
@@ -55,10 +64,10 @@ The tool uses a configuration file (`config.py`) with the following settings:
 
 - API endpoints for HelloPeter
 - Rate limiting settings (delay between requests, retries, backoff factor)
-- Database path (automatically set to `~/.hellopeter_cli/hellopeter_reviews.db`)
-- Default output directory
+- Database path (defaults to `hellopeter_reviews.db` in the directory where the command is run)
+- Default output directory (defaults to `output/` in the directory where the command is run)
 
-Currently, all configuration is done through the command-line arguments. The tool does not use environment variables, but the python-dotenv package is included for potential future use.
+All configuration is currently done through command-line arguments.
 
 ## Usage
 
@@ -134,7 +143,7 @@ hellopeter-cli fetch --businesses bank-zero-mutual-bank --log-file hellopeter.lo
 
 ### Database Operations
 
-The tool automatically creates and initializes a SQLite database in your home directory at `~/.hellopeter_cli/hellopeter_reviews.db` when you use the `db` output format.
+The tool automatically creates and initializes a SQLite database named `hellopeter_reviews.db` in the directory where you run the command, if you use the `db` output format.
 
 To reset the database:
 
@@ -170,6 +179,8 @@ The tool automatically checks for existing reviews in the database and only fetc
 ```bash
 hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format db --force-refresh
 ```
+
+The database file is typically named `hellopeter_reviews.db` and located where you run the command.
 
 ## Scheduling
 

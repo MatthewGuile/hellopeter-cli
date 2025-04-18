@@ -30,9 +30,9 @@ setup(
     description="A command-line tool for extracting reviews and statistics from HelloPeter",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="HelloPeter CLI Team",
-    author_email="example@example.com",
-    url="https://github.com/yourusername/hellopeter-cli",
+    author="Matthew Guile",
+    author_email="guile.matthew@gmail.com",
+    url="https://github.com/MatthewGuile/hellopeter-cli",
     package_dir=package_dir,
     packages=find_packages(where="src"),
     include_package_data=True,
@@ -43,7 +43,6 @@ setup(
     },
     install_requires=[
         "requests>=2.31.0",
-        "python-dotenv>=1.0.0",
         "SQLAlchemy>=2.0.23",
         "pandas>=2.1.1",
         "tqdm>=4.66.1",
@@ -62,7 +61,7 @@ setup(
     python_requires=">=3.8",
     keywords="hellopeter, reviews, statistics, api, cli",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/hellopeter-cli/issues",
-        "Source": "https://github.com/yourusername/hellopeter-cli",
+        "Bug Reports": "https://github.com/MatthewGuile/hellopeter-cli/issues",
+        "Source": "https://github.com/MatthewGuile/hellopeter-cli",
     },
 ) 

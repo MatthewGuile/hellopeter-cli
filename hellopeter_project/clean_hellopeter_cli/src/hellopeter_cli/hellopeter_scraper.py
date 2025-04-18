@@ -12,6 +12,11 @@ from tqdm import tqdm
 
 from . import config
 from .database import init_db, Session, get_or_create_business, store_review, store_business_stats
+# Import version (assuming __init__.py is in the same directory level)
+try:
+    from . import __version__ as cli_version
+except ImportError: # Fallback if import structure is different
+    cli_version = "unknown"
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -24,7 +29,12 @@ logger = logging.getLogger(__name__)
 )
 def make_api_request(url, params=None):
     """Make a request to the API with exponential backoff for retries."""
-    response = requests.get(url, params=params)
+    # Construct User-Agent string
+    user_agent = f"hellopeter-cli/{cli_version} (https://github.com/MatthewGuile/hellopeter-cli)"
+    headers = {'User-Agent': user_agent}
+
+    # Use headers in the request
+    response = requests.get(url, params=params, headers=headers)
     response.raise_for_status()  # Raise an exception for 4XX/5XX responses
     
     # Add a delay to respect rate limits
