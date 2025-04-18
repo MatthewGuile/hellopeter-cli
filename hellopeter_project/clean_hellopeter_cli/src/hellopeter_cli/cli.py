@@ -88,40 +88,90 @@ def save_to_database(business_data, reviews=None, stats_data=None):
 
 
 def save_to_csv(output_dir, business_slug, business_data=None, reviews=None, stats_data=None):
-    """Save data to CSV files."""
+    """Save data to CSV files, mimicking the database structure for stats."""
     os.makedirs(output_dir, exist_ok=True)
+    something_saved = False # Track if any file was actually saved
     
     # Save business data
     if business_data:
         business_file = os.path.join(output_dir, f"business_{business_slug}.csv")
-        business_df = pd.DataFrame([business_data])
-        business_df.to_csv(business_file, index=False)
+        # Ensure business_data is treated as a single row
+        business_df = pd.DataFrame([business_data] if isinstance(business_data, dict) else business_data)
+        business_df.to_csv(business_file, index=False, encoding='utf-8')
         logger.info(f"Business data saved to {business_file}")
+        something_saved = True
     
     # Save reviews
     if reviews:
         reviews_file = os.path.join(output_dir, f"reviews_{business_slug}.csv")
         reviews_df = pd.DataFrame(reviews)
-        reviews_df.to_csv(reviews_file, index=False)
+        reviews_df.to_csv(reviews_file, index=False, encoding='utf-8')
         logger.info(f"Reviews saved to {reviews_file}")
+        something_saved = True
     
-    # Save stats data
+    # Save stats data - Extract specific fields like the database does
     if stats_data:
-        # Flatten the stats data for CSV format
-        flat_stats = {}
-        for key, value in stats_data.items():
-            if isinstance(value, dict):
-                for sub_key, sub_value in value.items():
-                    flat_stats[f"{key}_{sub_key}"] = sub_value
-            else:
-                flat_stats[key] = value
-        
+        extracted_stats = {}
+
+        # --- Mimic extraction from store_business_stats --- 
+        monthly_stats = stats_data.get('monthlyStats', {})
+        review_ratings = stats_data.get('reviewRatings', {})
+        rows = review_ratings.get('rows', [])
+
+        # Top-level stats
+        extracted_stats['total_reviews'] = stats_data.get('totalReviews', 0)
+        extracted_stats['avg_response_time'] = stats_data.get('avgResponseTime')
+        extracted_stats['response_rate'] = stats_data.get('responseRate')
+
+        # Average rating with conversion
+        average_rating = 0.0
+        try:
+            average_rating = float(stats_data.get('reviewAverage', '0.0'))
+        except (ValueError, TypeError):
+            logger.warning(f"Could not convert reviewAverage to float for CSV: {stats_data.get('reviewAverage')}")
+        extracted_stats['average_rating'] = average_rating
+
+        # Rating counts
+        rating_counts = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0}
+        for row in rows:
+            if len(row) >= 2:
+                rating_label = str(row[0]) # Ensure label is string
+                rating_count = row[1]
+                if "1 Star" in rating_label:
+                    rating_counts['1'] = rating_count
+                elif "2 Stars" in rating_label:
+                    rating_counts['2'] = rating_count
+                elif "3 Stars" in rating_label:
+                    rating_counts['3'] = rating_count
+                elif "4 Stars" in rating_label:
+                    rating_counts['4'] = rating_count
+                elif "5 Stars" in rating_label:
+                    rating_counts['5'] = rating_count
+        extracted_stats['rating_1_count'] = rating_counts['1']
+        extracted_stats['rating_2_count'] = rating_counts['2']
+        extracted_stats['rating_3_count'] = rating_counts['3']
+        extracted_stats['rating_4_count'] = rating_counts['4']
+        extracted_stats['rating_5_count'] = rating_counts['5']
+
+        # Stats from monthlyStats
+        extracted_stats['trust_index'] = monthly_stats.get('trustIndex', 0.0)
+        extracted_stats['industry_id'] = monthly_stats.get('industryId')
+        extracted_stats['industry_ranking'] = monthly_stats.get('industryRanking')
+        extracted_stats['review_count_total_monthly'] = monthly_stats.get('reviewCountTotal') # Renamed slightly for clarity vs top-level total
+
+        # --- End mimic --- 
+
         stats_file = os.path.join(output_dir, f"stats_{business_slug}.csv")
-        stats_df = pd.DataFrame([flat_stats])
-        stats_df.to_csv(stats_file, index=False)
-        logger.info(f"Business stats saved to {stats_file}")
-    
-    logger.info(f"Data exported to CSV files in {output_dir}/")
+        # Ensure extracted_stats is treated as a single row
+        stats_df = pd.DataFrame([extracted_stats] if isinstance(extracted_stats, dict) else extracted_stats)
+        stats_df.to_csv(stats_file, index=False, encoding='utf-8')
+        logger.info(f"Business stats (structured) saved to {stats_file}")
+        something_saved = True
+
+    if something_saved:
+         logger.info(f"Data exported to CSV files in {output_dir}/")
+    # else: # Optional: log if nothing was saved?
+    #     logger.info(f"No data provided to save for {business_slug} in CSV format.")
 
 
 def save_to_json(output_dir, business_slug, business_data=None, reviews=None, stats_data=None):

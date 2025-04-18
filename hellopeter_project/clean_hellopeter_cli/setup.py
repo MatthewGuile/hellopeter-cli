@@ -9,12 +9,20 @@ from setuptools import setup, find_packages
 with open(os.path.join(os.path.dirname(__file__), "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
-# Get version from the package
-with open(os.path.join("hellopeter_cli", "__init__.py"), encoding="utf-8") as f:
-    for line in f:
-        if line.startswith("__version__"):
-            version = line.split("=")[1].strip().strip('"\'')
-            break
+# Get version from the package (Adjust path for src layout)
+init_path = os.path.join("src", "hellopeter_cli", "__init__.py")
+version = "0.0.0" # Default version if file not found or version missing
+try:
+    with open(init_path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("__version__"):
+                version = line.split("=")[1].strip().strip('"\'')
+                break
+except FileNotFoundError:
+    print(f"Warning: Could not find {init_path} to read version.")
+
+# Tell setuptools where the package code is (src directory)
+package_dir = {"": "src"}
 
 setup(
     name="hellopeter-cli",
@@ -25,7 +33,8 @@ setup(
     author="HelloPeter CLI Team",
     author_email="example@example.com",
     url="https://github.com/yourusername/hellopeter-cli",
-    packages=find_packages(),
+    package_dir=package_dir,
+    packages=find_packages(where="src"),
     include_package_data=True,
     entry_points={
         "console_scripts": [
