@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script for the HelloPeter CLI package.
+Setup script for the Hellopeter CLI package.
 """
 import os
 from setuptools import setup, find_packages
@@ -27,7 +27,7 @@ package_dir = {"": "src"}
 setup(
     name="hellopeter-cli",
     version=version,
-    description="A command-line tool for extracting reviews and statistics from HelloPeter",
+    description="A command-line tool for extracting reviews and statistics from Hellopeter",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Matthew Guile",
@@ -68,9 +68,9 @@ setup(
         "Programming Language :: Python :: 3.12"
     ],
     python_requires=">=3.8",
-    keywords="hellopeter, reviews, statistics, api, cli, data extraction, web scraping, python",
+    keywords="Hellopeter, reviews, statistics, api, cli, data extraction, web scraping, python",
     project_urls={
-        "Bug Reports": "https://github.com/MatthewGuile/hellopeter-cli/issues",
-        "Source": "https://github.com/MatthewGuile/hellopeter-cli",
+        "Bug Reports": "https://github.com/MatthewGuile/Hellopeter-cli/issues",
+        "Source": "https://github.com/MatthewGuile/Hellopeter-cli",
     },
 ) 
