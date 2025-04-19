@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-HelloPeter CLI - A command-line tool for extracting reviews and statistics from HelloPeter.
+Hellopeter-CLI - A command-line tool for extracting reviews and statistics from Hellopeter.
 
-This tool allows you to extract reviews and business statistics from the HelloPeter platform
+This tool allows you to extract reviews and business statistics from the Hellopeter platform
 and store them in a SQLite database or export them to CSV/JSON files.
 """
 import os

@@ -1,5 +1,5 @@
 """
-Scraper for the HelloPeter API.
+Scraper for the Hellopeter API.
 """
 import os
 import time

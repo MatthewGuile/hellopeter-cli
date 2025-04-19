@@ -1,5 +1,5 @@
 """
-Database module for storing HelloPeter reviews.
+Database module for storing Hellopeter reviews and statistics.
 """
 import os
 import logging
@@ -359,5 +359,5 @@ def save_to_database(business_data, reviews=None, stats_data=None):
         return False
     finally:
         session.close()
-    # Removing commented out debug lines from previous step
+
     return True # Reverted: Indicate overall success

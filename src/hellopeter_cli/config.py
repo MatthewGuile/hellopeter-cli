@@ -1,5 +1,5 @@
 """
-Configuration settings for the HelloPeter API scraper.
+Configuration settings Hellopeter-CLI.
 """
 import os
 import logging
