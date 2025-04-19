@@ -15,7 +15,7 @@ import pandas as pd
 
 from . import config
 from .database import init_db, Session, get_or_create_business, store_review, store_business_stats, get_existing_review_ids
-from .hellopeter_scraper import fetch_business_stats, fetch_reviews_for_business, save_raw_data
+from .hellopeter_scraper import fetch_business_stats, fetch_reviews_for_business
 from .export_data import export_businesses, export_reviews, export_business_stats
 from .reset_db import reset_database
 
@@ -88,31 +88,52 @@ def save_to_database(business_data, reviews=None, stats_data=None):
 
 
 def save_to_csv(output_dir, business_slug, business_data=None, reviews=None, stats_data=None):
-    """Save data to CSV files, mimicking the database structure for stats."""
+    """Save stats and reviews data to CSV files, including business details in each file.
+    
+    No separate business CSV is created; business details are added as columns.
+    """
     os.makedirs(output_dir, exist_ok=True)
     something_saved = False # Track if any file was actually saved
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # Save business data
-    if business_data:
-        business_file = os.path.join(output_dir, f"business_{business_slug}.csv")
-        # Ensure business_data is treated as a single row
-        business_df = pd.DataFrame([business_data] if isinstance(business_data, dict) else business_data)
-        business_df.to_csv(business_file, index=False, encoding='utf-8')
-        logger.info(f"Business data saved to {business_file}")
-        something_saved = True
-    
-    # Save reviews
-    if reviews:
-        reviews_file = os.path.join(output_dir, f"reviews_{business_slug}.csv")
-        reviews_df = pd.DataFrame(reviews)
-        reviews_df.to_csv(reviews_file, index=False, encoding='utf-8')
-        logger.info(f"Reviews saved to {reviews_file}")
-        something_saved = True
-    
-    # Save stats data - Extract specific fields like the database does
-    if stats_data:
-        extracted_stats = {}
+    # Prepare business details to add as columns (use defaults if business_data is missing)
+    biz_details = {
+        'business_slug': business_slug, 
+        'business_name': business_data.get('name', business_slug) if business_data else business_slug,
+        'business_industry_name': business_data.get('industry_name') if business_data else None,
+        'business_industry_slug': business_data.get('industry_slug') if business_data else None
+    }
 
+    # --- Remove separate business file saving --- 
+    # if business_data:
+    #     business_file = os.path.join(output_dir, f"business_{business_slug}_{timestamp}.csv")
+    #     business_df = pd.DataFrame([business_data] if isinstance(business_data, dict) else business_data)
+    #     business_df.to_csv(business_file, index=False, encoding='utf-8')
+    #     logger.info(f"Business data saved to {business_file}")
+    #     something_saved = True 
+    
+    # Save reviews (with added business columns)
+    if reviews:
+        reviews_file = os.path.join(output_dir, f"reviews_{business_slug}_{timestamp}.csv")
+        reviews_df = pd.DataFrame(reviews)
+        # Add business columns
+        for col_name, value in biz_details.items():
+            reviews_df[col_name] = value
+        # Reorder columns to put business info first (optional)
+        business_cols = list(biz_details.keys())
+        other_cols = [col for col in reviews_df.columns if col not in business_cols]
+        reviews_df = reviews_df[business_cols + other_cols]
+        
+        reviews_df.to_csv(reviews_file, index=False, encoding='utf-8')
+        logger.info(f"Reviews (with business details) saved to {reviews_file}")
+        something_saved = True
+    
+    # Save stats data (with added business columns)
+    if stats_data:
+        stats_file = os.path.join(output_dir, f"stats_{business_slug}_{timestamp}.csv")
+        
+        # Extract specific fields like the database does
+        extracted_stats = {}
         # --- Mimic extraction from store_business_stats --- 
         monthly_stats = stats_data.get('monthlyStats', {})
         review_ratings = stats_data.get('reviewRatings', {})
@@ -161,11 +182,19 @@ def save_to_csv(output_dir, business_slug, business_data=None, reviews=None, sta
 
         # --- End mimic --- 
 
-        stats_file = os.path.join(output_dir, f"stats_{business_slug}.csv")
-        # Ensure extracted_stats is treated as a single row
+        # Convert extracted stats to a DataFrame
         stats_df = pd.DataFrame([extracted_stats] if isinstance(extracted_stats, dict) else extracted_stats)
+        
+        # Add business columns
+        for col_name, value in biz_details.items():
+            stats_df[col_name] = value
+         # Reorder columns to put business info first (optional)
+        business_cols = list(biz_details.keys())
+        other_cols = [col for col in stats_df.columns if col not in business_cols]
+        stats_df = stats_df[business_cols + other_cols]
+
         stats_df.to_csv(stats_file, index=False, encoding='utf-8')
-        logger.info(f"Business stats (structured) saved to {stats_file}")
+        logger.info(f"Business stats (structured, with business details) saved to {stats_file}")
         something_saved = True
 
     if something_saved:
@@ -211,104 +240,165 @@ def fetch_command(args):
             logger.error(f"Error initializing database: {e}")
             logger.error("Falling back to CSV output format.")
             args.output_format = "csv"
-    
+
     # Get list of businesses to fetch
     businesses = args.businesses or config.TARGET_BUSINESSES
-    
+
     if not businesses:
         logger.error("No businesses specified. Please provide at least one business slug.")
         return 1
-    
-    total_reviews = 0
-    
+
+    total_reviews_fetched = 0
+    slugs_processed = 0
+    slugs_skipped = 0
+
     for business_slug in businesses:
-        logger.info(f"Fetching data for business: {business_slug}")
-        
+        logger.info(f"Processing slug: {business_slug}")
+
+        # Reset data variables for this slug
+        business_data_to_save = None
+        stats_data_to_save = None
+        reviews_to_save = None
+        fetch_successful = False # Track if any part of the fetch succeeded
+
         try:
-            # Fetch business stats
+            # --- Fetch Business Stats (if requested) --- 
             if not args.reviews_only:
-                logger.info(f"Fetching business stats for {business_slug}...")
-                business_data, stats_data = fetch_business_stats(business_slug)
-                
-                if not business_data:
-                    logger.warning(f"No business data found for {business_slug}")
-                    # Create minimal business data to allow processing to continue
-                    business_data = {
-                        "slug": business_slug,
-                        "name": business_slug,
-                        "industry_name": None,
-                        "industry_slug": None
-                    }
-                
-                logger.info(f"Fetched business stats for {business_data['name']}")
-                
-                # Save raw data if requested
-                if args.save_raw:
-                    save_raw_data(business_slug, "business_stats", stats_data, args.output_dir)
-                
-                # Save data based on output format
-                if args.output_format == "db":
-                    save_to_database(business_data, stats_data=stats_data)
-                elif args.output_format == "csv":
-                    save_to_csv(args.output_dir, business_slug, business_data=business_data, stats_data=stats_data)
-                elif args.output_format == "json":
-                    save_to_json(args.output_dir, business_slug, business_data=business_data, stats_data=stats_data)
-            
-            # Fetch reviews if not stats-only
+                logger.info(f"Attempting to fetch business stats for {business_slug}...")
+                temp_business_data, temp_stats_data = fetch_business_stats(business_slug)
+
+                # === Check for Stats Fetch Failure ===
+                if temp_business_data is None and temp_stats_data is None:
+                    logger.warning(f"Stats fetch failed for {business_slug} (e.g., 404 or API error). Will proceed to check for reviews.")
+                    # Do not continue yet, reviews might still work
+                else:
+                    fetch_successful = True # At least stats part worked
+                    business_data_to_save = temp_business_data # Store potentially valid data
+                    stats_data_to_save = temp_stats_data
+
+                    # Log success or partial success
+                    if business_data_to_save:
+                        logger.info(f"Successfully fetched business details for {business_data_to_save.get('name', business_slug)}.")
+                    if stats_data_to_save:
+                         logger.info(f"Successfully fetched stats data for {business_slug}.")
+                    elif business_data_to_save:
+                         logger.warning(f"Fetched business details but no stats data for {business_slug}.")
+
+            # --- Fetch Reviews (if requested) --- 
             if not args.stats_only:
-                logger.info(f"Fetching reviews for {business_slug}...")
-                
-                # Get existing review IDs if using database output
+                logger.info(f"Attempting to fetch reviews for {business_slug}...")
                 existing_review_ids = None
                 if args.output_format == "db" and not args.force_refresh:
                     session = Session()
                     try:
                         existing_review_ids = get_existing_review_ids(session, business_slug)
                         if existing_review_ids:
-                            logger.info(f"Found {len(existing_review_ids)} existing reviews for {business_slug} in the database")
+                            logger.info(f"Found {len(existing_review_ids)} existing reviews for {business_slug} in the database, will fetch only newer ones.")
                     finally:
                         session.close()
-                
-                business_data, reviews = fetch_reviews_for_business(
+
+                temp_business_data_reviews, temp_reviews = fetch_reviews_for_business(
                     business_slug,
                     start_page=args.start_page,
                     end_page=args.end_page,
                     existing_review_ids=existing_review_ids
                 )
-                
-                if not business_data:
-                    logger.warning(f"No business data found for {business_slug}")
-                    # Create minimal business data to allow processing to continue
-                    business_data = {
-                        "slug": business_slug,
-                        "name": business_slug,
-                        "industry_name": None,
-                        "industry_slug": None
-                    }
-                
-                if not reviews:
-                    logger.warning(f"No reviews found for {business_slug}")
+
+                # === Check for Reviews Fetch Failure ===
+                if temp_business_data_reviews is None and not temp_reviews:
+                     # Log failure only if stats also failed or weren't requested
+                     if not fetch_successful:
+                          logger.warning(f"Reviews fetch also failed for {business_slug}. No data could be retrieved.")
+                     else:
+                          logger.info(f"No new reviews found or fetched for {business_slug}.")
+                     # Do not set reviews_to_save if temp_reviews is empty/None
                 else:
-                    logger.info(f"Fetched {len(reviews)} reviews for {business_data['name']}")
-                    total_reviews += len(reviews)
+                    fetch_successful = True # Reviews part worked or returned business data
+                    reviews_to_save = temp_reviews # Store valid reviews (can be empty list)
+
+                    # Update business_data if reviews fetch provided it and we didn't get it from stats
+                    if temp_business_data_reviews and business_data_to_save is None:
+                        business_data_to_save = temp_business_data_reviews
+                        logger.info(f"Business details obtained from reviews fetch for {business_data_to_save.get('name', business_slug)}.")
+
+                    # Log review fetch results
+                    if reviews_to_save:
+                        current_biz_name = business_data_to_save.get('name', business_slug) if business_data_to_save else business_slug
+                        logger.info(f"Successfully fetched {len(reviews_to_save)} reviews for {current_biz_name}.")
+                        total_reviews_fetched += len(reviews_to_save)
+                    elif temp_business_data_reviews:
+                        # Got business data but no reviews
+                        logger.info(f"No new reviews found or fetched for {business_slug}, but business details were confirmed.")
+
+            # --- Post-Fetch Processing --- 
+
+            # If after all attempts, no fetch was successful, skip this slug entirely
+            if not fetch_successful:
+                logger.error(f"Failed to fetch any data (stats or reviews) for slug '{business_slug}'. Skipping.")
+                slugs_skipped += 1
+                continue # Go to the next business slug
+
+            # Create Placeholder Business Data ONLY if needed for saving associated stats/reviews
+            if business_data_to_save is None and (stats_data_to_save is not None or (reviews_to_save is not None and len(reviews_to_save) > 0)):
+                 logger.warning(f"No valid business details found for {business_slug}, creating minimal placeholder entry because associated stats/reviews exist.")
+                 business_data_to_save = {
+                     "slug": business_slug,
+                     "name": business_slug, # Use slug as name placeholder
+                     "industry_name": None,
+                     "industry_slug": None
+                 }
+
+            # --- Save Data (Single Call per Slug) --- 
+            # Only proceed if we have *something* concrete to save (business details, stats, or non-empty reviews)
+            should_save = (business_data_to_save is not None or 
+                           stats_data_to_save is not None or 
+                           (reviews_to_save is not None)) # Check if list exists, even if empty for stats saving
+
+            if should_save:
+                logger.info(f"Proceeding to save data for slug {business_slug} in {args.output_format} format.")
+                # Use the determined business_data (could be real or placeholder)
+                final_business_data = business_data_to_save 
                 
-                # Save raw data if requested
-                if args.save_raw:
-                    save_raw_data(business_slug, "reviews", reviews, args.output_dir)
-                
-                # Save data based on output format
                 if args.output_format == "db":
-                    save_to_database(business_data, reviews=reviews)
+                    # Call original save_to_database
+                    save_success = save_to_database(
+                        final_business_data, 
+                        reviews=reviews_to_save, # Pass the list
+                        stats_data=stats_data_to_save
+                    )
+                    if not save_success:
+                         logger.error(f"Database save operation failed for slug {business_slug}.")
+
                 elif args.output_format == "csv":
-                    save_to_csv(args.output_dir, business_slug, business_data=business_data, reviews=reviews)
+                    # Pass only non-None data to avoid creating empty files unless necessary
+                    save_to_csv(args.output_dir, business_slug, 
+                                business_data=final_business_data if final_business_data else None, 
+                                reviews=reviews_to_save if reviews_to_save else None, 
+                                stats_data=stats_data_to_save if stats_data_to_save else None)
                 elif args.output_format == "json":
-                    save_to_json(args.output_dir, business_slug, business_data=business_data, reviews=reviews)
-        
+                     # Pass only non-None data
+                    save_to_json(args.output_dir, business_slug, 
+                                 business_data=final_business_data if final_business_data else None, 
+                                 reviews=reviews_to_save if reviews_to_save else None, 
+                                 stats_data=stats_data_to_save if stats_data_to_save else None)
+                slugs_processed += 1
+            else:
+                # This case should now be rare due to the 'fetch_successful' check earlier,
+                # but acts as a safeguard.
+                logger.info(f"No data fetched or requiring saving for slug {business_slug}.")
+            slugs_skipped += 1
+
         except Exception as e:
-            logger.error(f"Error processing {business_slug}: {e}")
-    
-    logger.info(f"Fetch completed. Total reviews: {total_reviews}")
-    return 0
+            logger.exception(f"Unexpected error processing {business_slug}: {e}", exc_info=True) # Log full traceback
+            slugs_skipped += 1
+            # Continue to the next business slug
+
+    logger.info(f"--- Fetch Summary ---")
+    logger.info(f"Total slugs processed and saved: {slugs_processed}")
+    logger.info(f"Total slugs skipped (due to fetch errors or no data): {slugs_skipped}")
+    logger.info(f"Total reviews fetched across all processed slugs: {total_reviews_fetched}")
+    logger.info(f"---------------------")
+    return 0 # Return 0 for success, even if some slugs failed
 
 
 def reset_command(args):
@@ -344,8 +434,6 @@ def main():
                              help="Page number to start fetching reviews from")
     fetch_parser.add_argument("--end-page", type=int, 
                              help="Page number to stop fetching reviews at (default: fetch all pages)")
-    fetch_parser.add_argument("--save-raw", action="store_true", 
-                             help="Save raw API responses for debugging or further analysis")
     fetch_parser.add_argument("--stats-only", action="store_true", 
                              help="Only fetch business statistics (no reviews)")
     fetch_parser.add_argument("--reviews-only", action="store_true", 
@@ -356,8 +444,6 @@ def main():
                              help="Directory to save output files")
     fetch_parser.add_argument("--force-refresh", action="store_true",
                              help="Force refresh all reviews, even if they already exist in the database")
-    fetch_parser.add_argument("--log-file", 
-                            help="Path to a file where logs will be written (in addition to console output)")
     
     # Reset command
     reset_parser = subparsers.add_parser("reset", help="Reset the database")

@@ -122,43 +122,57 @@ def get_or_create_business(session, slug, name, industry_name=None, industry_slu
 
 
 def store_review(session, review_data, business_id):
-    """Store a review in the database."""
-    # Check if review already exists
-    existing_review = session.query(Review).filter_by(review_id=review_data['id']).first()
+    """Store a review in the database, skipping if it already exists."""
+    review_id_from_data = review_data.get('id')
+    if not review_id_from_data:
+        logger.warning("Skipping review data with no ID.")
+        return None # Indicate failure/skip
+        
+    # Check if review already exists by ID
+    existing_review = session.query(Review).filter_by(review_id=review_id_from_data).first()
     if existing_review:
-        logger.debug(f"Review {review_data['id']} already exists, skipping.")
-        return existing_review
+        logger.debug(f"Review {review_id_from_data} already exists, skipping.")
+        return existing_review # Return existing object, indicating skip
     
     # Parse datetime strings
-    created_at = datetime.strptime(review_data['created_at'], "%Y-%m-%d %H:%M:%S") if review_data.get('created_at') else None
-    author_created_date = datetime.strptime(review_data['author_created_date'], "%Y-%m-%d") if review_data.get('author_created_date') else None
-    
-    # Create new review
-    review = Review(
-        review_id=review_data['id'],
-        business_id=business_id,
-        user_id=review_data.get('user_id'),
-        created_at=created_at,
-        author_display_name=review_data.get('authorDisplayName'),
-        author=review_data.get('author'),
-        author_id=review_data.get('author_id'),
-        review_title=review_data.get('review_title'),
-        review_rating=review_data.get('review_rating'),
-        review_content=review_data.get('review_content'),
-        permalink=review_data.get('permalink'),
-        replied=review_data.get('replied', 0) == 1,
-        nps_rating=review_data.get('nps_rating'),
-        source=review_data.get('source'),
-        is_reported=review_data.get('is_reported', False),
-        author_created_date=author_created_date,
-        author_total_reviews_count=review_data.get('author_total_reviews_count')
-    )
-    
-    session.add(review)
-    session.commit()
-    logger.debug(f"Stored review {review.review_id}: {review.review_title}")
-    
-    return review
+    try:
+        created_at = datetime.strptime(review_data['created_at'], "%Y-%m-%d %H:%M:%S") if review_data.get('created_at') else None
+        author_created_date = datetime.strptime(review_data['author_created_date'], "%Y-%m-%d") if review_data.get('author_created_date') else None
+    except ValueError as e:
+        logger.warning(f"Could not parse date for review {review_id_from_data}: {e}. Storing as None.")
+        created_at = None
+        author_created_date = None
+
+    # === Review does not exist, create new ===
+    try:
+        review = Review(
+            review_id=review_id_from_data,
+            business_id=business_id,
+            user_id=review_data.get('user_id'),
+            created_at=created_at,
+            author_display_name=review_data.get('authorDisplayName'),
+            author=review_data.get('author'),
+            author_id=review_data.get('author_id'),
+            review_title=review_data.get('review_title'),
+            review_rating=review_data.get('review_rating'),
+            review_content=review_data.get('review_content'),
+            permalink=review_data.get('permalink'),
+            replied=review_data.get('replied', 0) == 1,
+            nps_rating=review_data.get('nps_rating'),
+            source=review_data.get('source'),
+            is_reported=review_data.get('is_reported', False),
+            author_created_date=author_created_date,
+            author_total_reviews_count=review_data.get('author_total_reviews_count')
+        )
+        
+        session.add(review)
+        session.commit()
+        logger.debug(f"Stored new review {review.review_id}") # Back to DEBUG level for insertion
+        return review # Return the newly created review object
+    except Exception as e:
+         logger.error(f"Error inserting new review {review_id_from_data}: {e}")
+         session.rollback()
+         return None # Indicate failure
 
 
 def store_business_stats(session, business_id, stats_data):
@@ -287,3 +301,63 @@ def get_existing_review_ids(session, business_slug):
         
     review_ids = session.query(Review.review_id).filter_by(business_id=business.id).all()
     return set(r[0] for r in review_ids) 
+
+
+def save_to_database(business_data, reviews=None, stats_data=None):
+    """Save data to the database.
+    
+    Returns:
+        bool: True if successful, False otherwise.
+    """
+    # Initialize the database if needed
+    try:
+        init_db()
+    except Exception as e:
+        logger.error(f"Error initializing database: {e}")
+        return False
+    
+    session = Session()
+    try:
+        # Get or create business
+        if business_data:
+            business = get_or_create_business(
+                session,
+                business_data.get("slug", "unknown_slug"),
+                business_data.get("name", "Unknown Name"),
+                business_data.get("industry_name"),
+                business_data.get("industry_slug")
+            )
+            business_id_for_data = business.id
+        else:
+             logger.warning("No business data provided to save_to_database.")
+             # Decide if this is a failure - let's assume not critical unless needed later
+             business_id_for_data = None 
+
+        # Store reviews if provided
+        if reviews and business_id_for_data:
+            logger.info(f"Saving {len(reviews)} fetched reviews for {business_data.get('name')} to database...")
+            count = 0
+            for review_data in reviews:
+                result = store_review(session, review_data, business_id_for_data)
+                if result and not isinstance(result, Review): # Checking if store_review returned existing (skip) vs new/None
+                     pass # Skipped
+                elif result: # It was inserted
+                     count += 1
+                # If result is None, an error occurred and was logged in store_review
+            logger.info(f"Saved {count} new reviews for {business_data.get('name')} to database")
+        
+        # Store business stats if provided
+        if stats_data and business_id_for_data:
+            store_business_stats(session, business_id_for_data, stats_data)
+            logger.info(f"Saved/Updated business stats for {business_data.get('name')}")
+
+        return True # Indicate overall success
+
+    except Exception as e:
+        logger.error(f"Error during database save operation: {e}")
+        session.rollback()
+        return False
+    finally:
+        session.close()
+    # Removing commented out debug lines from previous step
+    return True # Reverted: Indicate overall success

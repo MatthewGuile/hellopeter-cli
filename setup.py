@@ -57,9 +57,10 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12"
     ],
     python_requires=">=3.8",
-    keywords="hellopeter, reviews, statistics, api, cli",
+    keywords="hellopeter, reviews, statistics, api, cli, data extraction, web scraping, python",
     project_urls={
         "Bug Reports": "https://github.com/MatthewGuile/hellopeter-cli/issues",
         "Source": "https://github.com/MatthewGuile/hellopeter-cli",

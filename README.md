@@ -115,23 +115,17 @@ You can control which pages of reviews to fetch:
 hellopeter-cli fetch --businesses bank-zero-mutual-bank --start-page 1 --end-page 3
 ```
 
-### Saving Raw API Responses
-
-To save the raw API responses:
-
-```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank --save-raw
-```
-
 ### Avoiding Duplicate Reviews
 
-When using the database output format, the tool automatically checks for existing reviews and only fetches new ones. The tool is optimized to stop fetching as soon as it encounters reviews that already exist in the database, making it efficient even for businesses with thousands of reviews.
+When using the database output format (`--output-format db`), the tool normally checks for existing review IDs and only fetches/stores reviews that are not already present in the database. This is efficient for incrementally adding new reviews.
 
-To force fetching all reviews, even if they already exist in the database:
+To force fetching all reviews within the specified page range (or all pages if no range is given), even if they already exist in the database, use the `--force-refresh` option:
 
 ```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format db --force-refresh
+hellopeter-cli fetch --businesses your-business-slug --output-format db --force-refresh
 ```
+
+This is useful if you suspect the initial fetch missed something, but be aware that it is less efficient as it re-fetches reviews that might already be stored.
 
 ### Logging
 
@@ -155,10 +149,12 @@ hellopeter-cli reset
 
 ### CSV Output
 
-When using the CSV output format, the following files will be created:
-- `businesses.csv`: Information about the businesses
-- `reviews_<business-slug>.csv`: Reviews for each business
-- `business_stats_<business-slug>.csv`: Statistics for each business
+When using the CSV output format, the following files will be created in the output directory:
+- `reviews_<business-slug>_<timestamp>.csv`: Reviews for the business. Includes columns for business details (slug, name, industry) repeated on each row.
+- `stats_<business-slug>_<timestamp>.csv`: Statistics for the business. Includes columns for business details (slug, name, industry).
+
+Note: A separate `business_...csv` file is *no longer* created.
+The `<timestamp>` follows the format `YYYYMMDD_HHMMSS`.
 
 ### JSON Output
 
@@ -181,15 +177,6 @@ hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format db --for
 ```
 
 The database file is typically named `hellopeter_reviews.db` and located where you run the command.
-
-## Scheduling
-
-For automated data collection, you can schedule the tool to run periodically using a scheduler like cron (Linux/macOS) or Task Scheduler (Windows).
-
-Example cron job to run daily at 2 AM:
-```
-0 2 * * * /path/to/hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format db
-```
 
 ## License
 

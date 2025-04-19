@@ -156,14 +156,12 @@ def fetch_reviews_for_business(business_slug, start_page=1, end_page=None, exist
                 # Add only new reviews to our collection
                 all_reviews.extend(new_reviews)
                 
-                # If we found existing reviews and didn't add any new ones, we can stop fetching
-                if found_existing and not new_reviews:
-                    logger.info(f"Reached existing reviews at page {page}, stopping fetch")
-                    break
-                
-                # If we found some existing reviews but also added new ones, continue to the next page
+                # Log if we found existing reviews on this page (for info)
                 if found_existing:
-                    logger.info(f"Found some existing reviews at page {page}, but also added {len(new_reviews)} new reviews")
+                    if new_reviews:
+                        logger.debug(f"Page {page}: Found existing reviews, but also added {len(new_reviews)} new ones.")
+                    else:
+                         logger.debug(f"Page {page}: All reviews on this page already existed in the database.")
             else:
                 # No existing reviews to check against, add all reviews
                 all_reviews.extend(reviews_data)
@@ -172,19 +170,4 @@ def fetch_reviews_for_business(business_slug, start_page=1, end_page=None, exist
             logger.error(f"Error fetching reviews for {business_slug} on page {page}: {e}")
             break
     
-    return business_data, all_reviews
-
-
-def save_raw_data(business_slug, data_type, data, output_dir=None):
-    """Save raw API responses to JSON files."""
-    output_dir = output_dir or "raw_data"
-    os.makedirs(output_dir, exist_ok=True)
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{output_dir}/{data_type}_{business_slug}_{timestamp}.json"
-    
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    
-    logger.info(f"Raw data saved to {filename}")
-    return filename 
+    return business_data, all_reviews 

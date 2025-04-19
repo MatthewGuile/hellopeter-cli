@@ -5,6 +5,7 @@ import time
 import json
 import os
 from unittest.mock import patch, call, Mock, mock_open # Import mock_open
+import responses
 
 # Adjust import path based on structure
 import sys
@@ -15,9 +16,13 @@ from hellopeter_cli.hellopeter_scraper import (
     make_api_request,
     get_total_pages,
     fetch_business_stats,
-    fetch_reviews_for_business,
-    save_raw_data
+    fetch_reviews_for_business
 )
+
+# Mock config for tests
+config.MAX_RETRIES = 1
+config.BACKOFF_FACTOR = 0.1
+config.REQUEST_DELAY = 0
 
 # --- Sample Data ---
 
@@ -260,8 +265,8 @@ def test_fetch_reviews_for_business_page_range(mock_tqdm, mock_make_request):
 @patch('hellopeter_cli.hellopeter_scraper.make_api_request')
 @patch('hellopeter_cli.hellopeter_scraper.logger')
 @patch('tqdm.tqdm')
-def test_fetch_reviews_for_business_stop_early(mock_tqdm, mock_logger, mock_make_request, mock_get_total):
-    """Test that fetching stops early if existing reviews are found."""
+def test_fetch_reviews_for_business_filter_existing(mock_tqdm, mock_logger, mock_make_request, mock_get_total):
+    """Test that fetching continues but filters out existing reviews."""
     # Arrange
     existing_ids = {203, 204} # Pretend reviews from page 2 already exist
     # API will return page 1 (new reviews), then page 2 (existing reviews)
@@ -277,44 +282,67 @@ def test_fetch_reviews_for_business_stop_early(mock_tqdm, mock_logger, mock_make
 
     # Assert
     mock_get_total.assert_called_once_with(BUSINESS_SLUG)
-    # Crucially, only two API calls should be made (page 1 and page 2)
-    # The loop should break after processing page 2 because its reviews exist
+    # It should fetch BOTH pages
     assert mock_make_request.call_count == 2
     # Check calls explicitly
     assert mock_make_request.call_args_list == expected_calls_args
 
-    # Only reviews from page 1 should be in the results
+    # Only NEW reviews (from page 1) should be in the final results
     assert len(all_reviews) == 2
     assert all_reviews[0]["id"] == 201
     assert all_reviews[1]["id"] == 202
 
-    # Check that the informational log message was generated
-    mock_logger.info.assert_any_call("Reached existing reviews at page 2, stopping fetch")
+    # Check that the specific "stopping fetch" INFO message was NOT generated
+    stop_call = call("Reached existing reviews at page 2, stopping fetch")
+    found_stop_call = False
+    for call_item in mock_logger.info.call_args_list:
+        if call_item == stop_call:
+            found_stop_call = True
+            break
+    assert not found_stop_call, "The 'stopping fetch' log message should not have been called."
+    
+    # Check that the DEBUG message about existing reviews WAS generated
+    mock_logger.debug.assert_any_call("Page 2: All reviews on this page already existed in the database.")
 
 
-# Test save_raw_data
-@patch("builtins.open", new_callable=mock_open) # Use mock_open utility
-@patch('os.makedirs')
-@patch('json.dump')
-@patch('hellopeter_cli.hellopeter_scraper.logger')
-def test_save_raw_data(mock_logger, mock_json_dump, mock_makedirs, mock_open_instance):
-    """Test saving raw data to a JSON file."""
-    # Arrange
-    test_data = {"key": "value"}
-    data_type = "test_type"
-    output_dir_arg = "custom_output"
+# --- REMOVE TEST FUNCTION for save_raw_data ---
+# @patch("os.makedirs")
+# @patch("builtins.open", new_callable=mock_open)
+# @patch("hellopeter_cli.hellopeter_scraper.datetime")
+# def test_save_raw_data(mock_dt, mock_open_func, mock_makedirs, tmp_path):
+#     """Test saving raw data to a file."""
+#     # Arrange
+#     mock_now = MagicMock()
+#     mock_now.strftime.return_value = "20240101_120000"
+#     mock_dt.now.return_value = mock_now
+#     
+#     business_slug = "test-biz"
+#     data_type = "reviews"
+#     data = [{"id": 1, "text": "Great!"}, {"id": 2, "text": "Okay"}]
+#     output_dir_arg = str(tmp_path / "raw_test")
+#     expected_filename = os.path.join(output_dir_arg, f"{data_type}_{business_slug}_20240101_120000.json")
+#     
+#     # Act
+#     filename = save_raw_data(business_slug, data_type, data, output_dir=output_dir_arg)
+#     
+#     # Assert
+#     mock_makedirs.assert_called_once_with(output_dir_arg, exist_ok=True)
+#     mock_open_func.assert_called_once_with(expected_filename, 'w', encoding='utf-8')
+#     handle = mock_open_func()
+#     # Check if json.dump was called correctly (it writes to the handle)
+#     # We need to check the arguments passed to the write method of the handle
+#     # json.dump internally calls handle.write
+#     # Check the first call to write (usually where json.dump writes)
+#     # Note: This is a bit indirect, checking the mock handle's write calls
+#     # It might be better to mock json.dump if possible, but patching builtins.open is common
+#     
+#     # A simple check: was write called?
+#     handle.write.assert_called()
+#     # A more specific check (might be brittle depending on json.dump formatting):
+#     # expected_json_string = json.dumps(data, ensure_ascii=False, indent=2)
+#     # handle.write.assert_any_call(expected_json_string) # Use assert_any_call if multiple writes occur
+#     
+#     assert filename == expected_filename
+# --- END REMOVE TEST FUNCTION --- 
 
-    # Act
-    filename = save_raw_data(BUSINESS_SLUG, data_type, test_data, output_dir=output_dir_arg)
-
-    # Assert
-    mock_makedirs.assert_called_once_with(output_dir_arg, exist_ok=True)
-    # Check filename structure (timestamp makes exact match hard, so check components)
-    assert filename.startswith(f"{output_dir_arg}/{data_type}_{BUSINESS_SLUG}_")
-    assert filename.endswith(".json")
-
-    # Check open was called correctly
-    mock_open_instance.assert_called_once_with(filename, 'w', encoding='utf-8')
-    # Check that dump was called with the handle provided by mock_open
-    mock_json_dump.assert_called_once_with(test_data, mock_open_instance(), ensure_ascii=False, indent=2)
-    mock_logger.info.assert_called_once_with(f"Raw data saved to {filename}") 
+# ... (keep code after the test_save_raw_data function) ... 
