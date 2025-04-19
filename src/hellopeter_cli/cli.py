@@ -446,7 +446,11 @@ def main():
                              help="Force refresh all reviews, even if they already exist in the database")
     
     # Reset command
-    reset_parser = subparsers.add_parser("reset", help="Reset the database")
+    reset_parser = subparsers.add_parser(
+        "reset", 
+        help="Reset the database",
+        description="Drops all tables (businesses, reviews, business_stats) from the database and recreates them empty. Use with caution as this deletes all stored data."
+    )
     reset_parser.add_argument("--log-file", 
                             help="Path to a file where logs will be written (in addition to console output)")
     
