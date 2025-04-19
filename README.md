@@ -22,14 +22,6 @@ The tool is designed to be respectful of rate limits and includes features like 
 
 ## Installation
 
-### From PyPI
-
-```bash
-pip install Hellopeter-cli
-```
-
-### Installation from Source
-
 If you want to install the package directly from the source code, for example, to get the latest changes or modify the code:
 
 1. Clone this repository:
