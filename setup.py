@@ -48,6 +48,14 @@ setup(
         "tqdm>=4.66.1",
         "backoff>=2.2.1",
     ],
+    extras_require={
+        'test': [
+            'pytest>=7.0.0',
+            'pytest-mock>=3.10.0',
+            'responses>=0.25.0',
+            'requests-mock>=1.11.0',
+        ]
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

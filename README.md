@@ -29,34 +29,54 @@ The tool is designed to be respectful of rate limits and includes features like 
 pip install hellopeter-cli
 ```
 
-### From Source
+### Installation from Source
+
+If you want to install the package directly from the source code, for example, to get the latest changes or modify the code:
 
 1. Clone this repository:
    ```bash
-   git clone <repository-url>
-   cd hellopeter-cli
+   git clone https://github.com/MatthewGuile/Hellopeter-CLI
+   cd Hellopeter-CLI
    ```
 
-2. Install the dependencies:
+2. Create and activate a virtual environment (recommended):
    ```bash
-   pip install -r requirements.txt
+   # Example using venv (Python 3.3+)
+   python -m venv venv
+   # On Windows
+   .\venv\Scripts\activate
+   # On macOS/Linux
+   # source venv/bin/activate
    ```
 
-3. Install the package:
+3. Install the package in editable mode. This installs only the core runtime dependencies:
    ```bash
    pip install -e .
    ```
+   (Use `pip install .` for a non-editable install).
+
+**Development / Running Tests:**
+
+If you plan to run the unit tests or contribute to development, you need to install the additional testing dependencies. You can do this using:
+```bash
+pip install -e .[test]
+```
+This command installs the core package in editable mode plus the 'test' extras (like pytest, pytest-mock, etc.) defined in `setup.py`.
 
 ## Dependencies
 
-The tool requires the following Python packages:
-- requests: For making API requests
-- SQLAlchemy: For database operations
-- pandas: For data manipulation and CSV export
-- tqdm: For progress bars
-- backoff: For exponential backoff on API requests
+The core runtime dependencies (automatically installed via pip or `pip install .`) are:
+- `requests`
+- `SQLAlchemy`
+- `pandas`
+- `tqdm`
+- `backoff`
 
-These dependencies are listed in the `requirements.txt` file and will be automatically installed when you install the package.
+These are defined in `setup.py` under `install_requires`.
+
+Development and testing dependencies (like `pytest`, `pytest-mock`, `responses`, `requests-mock`) are defined under `extras_require['test']` in `setup.py` and can be installed as shown in the "Development Setup" section above.
+
+*(Note: The `requirements.txt` file is mainly for reference or specific environment pinning now, use `setup.py` for installation.)*
 
 ## Configuration
 
@@ -73,9 +93,24 @@ All configuration is currently done through command-line arguments.
 
 The tool provides commands for different operations:
 
+### Getting Help
+
+You can get help on the available commands and their options using the `-h` or `--help` flag:
+
+```bash
+# General help and list of commands
+hellopeter-cli -h
+
+# Help for the 'fetch' command
+hellopeter-cli fetch -h
+
+# Help for the 'reset' command
+hellopeter-cli reset -h
+```
+
 ### Fetching Reviews and Statistics
 
-To fetch reviews and statistics for a specific business, you need to know the exact business slug from HelloPeter. The business slug is the part of the URL after "https://www.hellopeter.com/business/reviews/":
+To fetch reviews and statistics for a specific business, you need to know the exact business slug from HelloPeter. A **business slug** is a unique, URL-friendly identifier used by HelloPeter for a specific business (e.g., `bank-zero-mutual-bank`). You can usually find the slug in the address bar of your web browser when viewing the business's review page on the HelloPeter website; it's the part of the URL after `/business/reviews/`.
 
 ```bash
 hellopeter-cli fetch --businesses bank-zero-mutual-bank
@@ -117,7 +152,7 @@ hellopeter-cli fetch --businesses bank-zero-mutual-bank --start-page 1 --end-pag
 
 ### Avoiding Duplicate Reviews
 
-When using the database output format (`--output-format db`), the tool normally checks for existing review IDs and only fetches/stores reviews that are not already present in the database. This is efficient for incrementally adding new reviews.
+When using the database output format (`--output-format db`), the tool normally checks for existing review IDs and only fetches/stores reviews that are not already present in the database. This is efficient for incrementally adding new reviews. However, please note that this approach captures reviews as they exist at the time of retrieval. If a review is later edited on the platform, the stored version will not be updated unless `--force-refresh` is used.
 
 To force fetching all reviews within the specified page range (or all pages if no range is given), even if they already exist in the database, use the `--force-refresh` option:
 
@@ -153,7 +188,6 @@ When using the CSV output format, the following files will be created in the out
 - `reviews_<business-slug>_<timestamp>.csv`: Reviews for the business. Includes columns for business details (slug, name, industry) repeated on each row.
 - `stats_<business-slug>_<timestamp>.csv`: Statistics for the business. Includes columns for business details (slug, name, industry).
 
-Note: A separate `business_...csv` file is *no longer* created.
 The `<timestamp>` follows the format `YYYYMMDD_HHMMSS`.
 
 ### JSON Output
