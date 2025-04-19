@@ -386,7 +386,8 @@ def fetch_command(args):
                 # This case should now be rare due to the 'fetch_successful' check earlier,
                 # but acts as a safeguard.
                 logger.info(f"No data fetched or requiring saving for slug {business_slug}.")
-            slugs_skipped += 1
+                # Increment skipped count ONLY if nothing was saved
+                slugs_skipped += 1 
 
         except Exception as e:
             logger.exception(f"Unexpected error processing {business_slug}: {e}", exc_info=True) # Log full traceback
