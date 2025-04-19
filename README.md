@@ -1,16 +1,15 @@
-# HelloPeter CLI
+# Hellopeter-CLI
 
-A command-line tool for extracting reviews and statistics from the HelloPeter platform.
+A command-line tool for extracting reviews and statistics from the Hellopeter platform.
 
 ## IMPORTANT: Terms of Service and Responsible Use
 
-**Disclaimer:** This tool interacts with the HelloPeter website API. Users are solely responsible for ensuring their use of this tool complies with the current HelloPeter Terms of Service (ToS) and any applicable laws or regulations regarding data scraping and API usage.
+**Disclaimer:** This tool interacts with the Hellopeter website API. Users are solely responsible for ensuring their use of this tool complies with the current Hellopeter Terms of Service (ToS) and any applicable laws or regulations regarding data scraping and API usage.
 
-*   **Review the ToS:** Before using this tool, please review HelloPeter's official Terms of Service.
-*   **Use Responsibly:** Avoid making excessive requests in a short period. The default rate limiting settings (delay between requests, retries) are designed to be respectful, but aggressive usage could negatively impact HelloPeter's services and may violate their ToS.
-*   **No Guarantees:** APIs can change without notice. This tool may stop working if HelloPeter modifies its API structure or access policies.
+*   **Use Responsibly:** Avoid making excessive requests in a short period. The default rate limiting settings (delay between requests, retries) are designed to be respectful, but aggressive usage could negatively impact Hellopeter's services and may violate their ToS.
+*   **No Guarantees:** APIs can change without notice. This tool may stop working if Hellopeter modifies its API structure or access policies.
 
-The developers of this tool assume no liability for misuse or for any consequences arising from the user's failure to comply with HelloPeter's Terms of Service.
+The developers of this tool assume no liability for misuse or for any consequences arising from the user's failure to comply with Hellopeter's Terms of Service.
 
 ## Overview
 
@@ -26,7 +25,7 @@ The tool is designed to be respectful of rate limits and includes features like 
 ### From PyPI
 
 ```bash
-pip install hellopeter-cli
+pip install Hellopeter-cli
 ```
 
 ### Installation from Source
@@ -76,18 +75,18 @@ These are defined in `setup.py` under `install_requires`.
 
 Development and testing dependencies (like `pytest`, `pytest-mock`, `responses`, `requests-mock`) are defined under `extras_require['test']` in `setup.py` and can be installed as shown in the "Development Setup" section above.
 
-*(Note: The `requirements.txt` file is mainly for reference or specific environment pinning now, use `setup.py` for installation.)*
+*(Note: Dependencies for installation are managed via `setup.py`. Use the `pip install .` or `pip install -e .` commands for installation, which utilize `setup.py`, rather than directly using `pip install -r requirements.txt` for this package.)*
 
 ## Configuration
 
 The tool uses a configuration file (`config.py`) with the following settings:
 
-- API endpoints for HelloPeter
+- API endpoints for Hellopeter
 - Rate limiting settings (delay between requests, retries, backoff factor)
-- Database path (defaults to `hellopeter_reviews.db` in the directory where the command is run)
+- Database path (defaults to `Hellopeter_reviews.db` in the directory where the command is run)
 - Default output directory (defaults to `output/` in the directory where the command is run)
 
-All configuration is currently done through command-line arguments.
+All configuration is done through command-line arguments.
 
 ## Usage
 
@@ -99,33 +98,33 @@ You can get help on the available commands and their options using the `-h` or `
 
 ```bash
 # General help and list of commands
-hellopeter-cli -h
+Hellopeter-cli -h
 
 # Help for the 'fetch' command
-hellopeter-cli fetch -h
+Hellopeter-cli fetch -h
 
 # Help for the 'reset' command
-hellopeter-cli reset -h
+Hellopeter-cli reset -h
 ```
 
 ### Fetching Reviews and Statistics
 
-To fetch reviews and statistics for a specific business, you need to know the exact business slug from HelloPeter. A **business slug** is a unique, URL-friendly identifier used by HelloPeter for a specific business (e.g., `bank-zero-mutual-bank`). You can usually find the slug in the address bar of your web browser when viewing the business's review page on the HelloPeter website; it's the part of the URL after `/business/reviews/`.
+To fetch reviews and statistics for a specific business, you need to know the exact business slug from Hellopeter. A **business slug** is a unique, URL-friendly identifier used by Hellopeter for a specific business (e.g., `bank-zero-mutual-bank`). You can usually find the slug in the address bar of your web browser when viewing the business's review page on the Hellopeter website; it's the part of the URL after `/business/reviews/`.
 
 ```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank
+Hellopeter-cli fetch --businesses bank-zero-mutual-bank
 ```
 
 You can also specify multiple businesses:
 
 ```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank capitec-bank
+Hellopeter-cli fetch --businesses bank-zero-mutual-bank capitec-bank
 ```
 
 By default, this will save the data to CSV files in the `output` directory. You can change the output format using the `--output-format` option:
 
 ```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format json
+Hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format json
 ```
 
 Available output formats:
@@ -138,8 +137,8 @@ Available output formats:
 To fetch only reviews or only statistics:
 
 ```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank --reviews-only
-hellopeter-cli fetch --businesses bank-zero-mutual-bank --stats-only
+Hellopeter-cli fetch --businesses bank-zero-mutual-bank --reviews-only
+Hellopeter-cli fetch --businesses bank-zero-mutual-bank --stats-only
 ```
 
 ### Pagination Control
@@ -147,7 +146,7 @@ hellopeter-cli fetch --businesses bank-zero-mutual-bank --stats-only
 You can control which pages of reviews to fetch:
 
 ```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank --start-page 1 --end-page 3
+Hellopeter-cli fetch --businesses bank-zero-mutual-bank --start-page 1 --end-page 3
 ```
 
 ### Avoiding Duplicate Reviews
@@ -157,7 +156,7 @@ When using the database output format (`--output-format db`), the tool normally 
 To force fetching all reviews within the specified page range (or all pages if no range is given), even if they already exist in the database, use the `--force-refresh` option:
 
 ```bash
-hellopeter-cli fetch --businesses your-business-slug --output-format db --force-refresh
+Hellopeter-cli fetch --businesses your-business-slug --output-format db --force-refresh
 ```
 
 This is useful if you suspect the initial fetch missed something, but be aware that it is less efficient as it re-fetches reviews that might already be stored.
@@ -167,17 +166,17 @@ This is useful if you suspect the initial fetch missed something, but be aware t
 You can specify a log file to capture all log messages:
 
 ```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank --log-file hellopeter.log
+Hellopeter-cli fetch --businesses bank-zero-mutual-bank --log-file Hellopeter.log
 ```
 
 ### Database Operations
 
-The tool automatically creates and initializes a SQLite database named `hellopeter_reviews.db` in the directory where you run the command, if you use the `db` output format.
+The tool automatically creates and initializes a SQLite database named `Hellopeter_reviews.db` in the directory where you run the command, if you use the `db` output format.
 
 To reset the database:
 
 ```bash
-hellopeter-cli reset
+Hellopeter-cli reset
 ```
 
 ## Output
@@ -207,10 +206,10 @@ When using the database output format, the data will be stored in a SQLite datab
 The tool automatically checks for existing reviews in the database and only fetches new ones. If you want to force a refresh of all reviews, you can use the `--force-refresh` option:
 
 ```bash
-hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format db --force-refresh
+Hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format db --force-refresh
 ```
 
-The database file is typically named `hellopeter_reviews.db` and located where you run the command.
+The database file is typically named `Hellopeter_reviews.db` and located where you run the command.
 
 ## License
 
