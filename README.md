@@ -1,4 +1,4 @@
-# Hellopeter-CLI
+# Hellopeter-cli
 
 A command-line tool for extracting reviews and statistics from the Hellopeter platform.
 
@@ -26,8 +26,8 @@ If you want to install the package directly from the source code, for example, t
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/MatthewGuile/Hellopeter-CLI
-   cd Hellopeter-CLI
+   git clone https://github.com/MatthewGuile/hellopeter-cli
+   cd hellopeter-cli
    ```
 
 2. Create and activate a virtual environment (recommended):
@@ -90,13 +90,13 @@ You can get help on the available commands and their options using the `-h` or `
 
 ```bash
 # General help and list of commands
-Hellopeter-cli -h
+hellopeter-cli -h
 
 # Help for the 'fetch' command
-Hellopeter-cli fetch -h
+hellopeter-cli fetch -h
 
 # Help for the 'reset' command
-Hellopeter-cli reset -h
+hellopeter-cli reset -h
 ```
 
 ### Fetching Reviews and Statistics
@@ -104,19 +104,19 @@ Hellopeter-cli reset -h
 To fetch reviews and statistics for a specific business, you need to know the exact business slug from Hellopeter. A **business slug** is a unique, URL-friendly identifier used by Hellopeter for a specific business (e.g., `bank-zero-mutual-bank`). You can usually find the slug in the address bar of your web browser when viewing the business's review page on the Hellopeter website; it's the part of the URL after `/business/reviews/`.
 
 ```bash
-Hellopeter-cli fetch --businesses bank-zero-mutual-bank
+hellopeter-cli fetch --businesses bank-zero-mutual-bank
 ```
 
 You can also specify multiple businesses:
 
 ```bash
-Hellopeter-cli fetch --businesses bank-zero-mutual-bank capitec-bank
+hellopeter-cli fetch --businesses bank-zero-mutual-bank capitec-bank
 ```
 
 By default, this will save the data to CSV files in the `output` directory. You can change the output format using the `--output-format` option:
 
 ```bash
-Hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format json
+hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format json
 ```
 
 Available output formats:
@@ -129,8 +129,8 @@ Available output formats:
 To fetch only reviews or only statistics:
 
 ```bash
-Hellopeter-cli fetch --businesses bank-zero-mutual-bank --reviews-only
-Hellopeter-cli fetch --businesses bank-zero-mutual-bank --stats-only
+hellopeter-cli fetch --businesses bank-zero-mutual-bank --reviews-only
+hellopeter-cli fetch --businesses bank-zero-mutual-bank --stats-only
 ```
 
 ### Pagination Control
@@ -138,7 +138,7 @@ Hellopeter-cli fetch --businesses bank-zero-mutual-bank --stats-only
 You can control which pages of reviews to fetch:
 
 ```bash
-Hellopeter-cli fetch --businesses bank-zero-mutual-bank --start-page 1 --end-page 3
+hellopeter-cli fetch --businesses bank-zero-mutual-bank --start-page 1 --end-page 3
 ```
 
 ### Avoiding Duplicate Reviews
@@ -148,7 +148,7 @@ When using the database output format (`--output-format db`), the tool normally 
 To force fetching all reviews within the specified page range (or all pages if no range is given), even if they already exist in the database, use the `--force-refresh` option:
 
 ```bash
-Hellopeter-cli fetch --businesses your-business-slug --output-format db --force-refresh
+hellopeter-cli fetch --businesses your-business-slug --output-format db --force-refresh
 ```
 
 This is useful if you suspect the initial fetch missed something, but be aware that it is less efficient as it re-fetches reviews that might already be stored.
@@ -158,7 +158,7 @@ This is useful if you suspect the initial fetch missed something, but be aware t
 You can specify a log file to capture all log messages:
 
 ```bash
-Hellopeter-cli fetch --businesses bank-zero-mutual-bank --log-file Hellopeter.log
+hellopeter-cli fetch --businesses bank-zero-mutual-bank --log-file Hellopeter.log
 ```
 
 ### Database Operations
@@ -168,7 +168,7 @@ The tool automatically creates and initializes a SQLite database named `Hellopet
 To reset the database:
 
 ```bash
-Hellopeter-cli reset
+hellopeter-cli reset
 ```
 
 ## Output
@@ -198,7 +198,7 @@ When using the database output format, the data will be stored in a SQLite datab
 The tool automatically checks for existing reviews in the database and only fetches new ones. If you want to force a refresh of all reviews, you can use the `--force-refresh` option:
 
 ```bash
-Hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format db --force-refresh
+hellopeter-cli fetch --businesses bank-zero-mutual-bank --output-format db --force-refresh
 ```
 
 The database file is typically named `Hellopeter_reviews.db` and located where you run the command.
